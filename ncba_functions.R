@@ -24,9 +24,15 @@ if (!require(tmap)) install.packages(
 if (!require(tidyverse)) install.packages(
   "tidyverse", repos = "http://cran.us.r-project.org"
 )
+if (!require(mongolite)) install.packages(
+  "mongolite", repos = "http://cran.us.r-project.org"
+)
+if (!require(sf)) install.packages(
+  "sf", repos = "http://cran.us.r-project.org"
+)
 
 # Load the config file
-source(here("resources",  "ncba_config.r"))
+source(here("ncba_config.r"))
 
 # Set the working directory to the work_dir variable from the config file.
 #   This may not always work (rmarkdown).....
@@ -34,7 +40,7 @@ source(here("resources",  "ncba_config.r"))
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-connect_ncba_db <- function(database, collection){
+connect_ncba_db <- function(collection, database = "ebd_mgmt"){
   # Connect to the NCBA MongoDB database
   #
   # Description:
@@ -47,9 +53,8 @@ connect_ncba_db <- function(database, collection){
   # collection -- collection name (e.g., "ebd")
   #
   # Example:
-  # conn <- connect_ncba_db(database = "ebd_mgmt", collection = "ebd")
+  # conn <- connect_ncba_db(collection = "ebd")
   # mongodata <- conn$find({})
-  library(mongolite)
 
   # Database info
   host <- "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
@@ -74,7 +79,7 @@ connect_ncba_db <- function(database, collection){
 get_blocks <- function(
   spatial = FALSE,
   fields = NULL,
-  priority_only = FALSE,
+  priority_only = TRUE,
   crs = 4326
 ) {
   # Returns a data frame of blocks with or without geometries
@@ -102,20 +107,15 @@ get_blocks <- function(
   #   "ECOREGION"
   #
   #   crs -- code of the CRS that you want spatial output in.  Defaults to 4326.
-  library(sf)
+
 
   # Connect to the blocks collection (table)
-  connection_blocks <- connect_ncba_db(
-    database = "ebd_mgmt",
-    collection = "blocks"
-  )
+  connection_blocks <- connect_ncba_db(collection = "blocks")
 
   # Set query string if priority_only is TRUE
   if (priority_only) {
     querystring <- '{"PRIORITY": "1"}'
-
   } else {
-
     querystring <- "{}"
   }
 
@@ -491,8 +491,7 @@ get_breeding_dates <- function(species, day_year = FALSE){
   # species -- common name of the species
 
   # Connect to the blocks collection (table)
-  connection <- connect_ncba_db(database = "ebd_mgmt",
-                                collection = "safe_dates")
+  connection <- connect_ncba_db(collection = "safe_dates")
 
   # Define query
   query <- str_interp('{"COMMON_NAME" : "${species}"}')
@@ -555,7 +554,11 @@ highest_category <- function(species, dataframe = NULL) {
 
     # Get a blocks data frame
     fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME", "PRIORITY")
-    blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+    blocks_sf <- get_blocks(
+                            spatial = TRUE,
+                            fields = fields,
+                            priority_only = FALSE
+                          )
 
     # Join to add NA rows and block geometries.
     highest_sf <- left_join(blocks_sf, highest,
@@ -613,7 +616,7 @@ calculate_breeding_dates <- function(species, basis, quantiles, year = 2023,
 
   # Get the blocks data frame
   fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION")
-  blocks <- get_blocks(spatial = FALSE, fields = fields)
+  blocks <- get_blocks(spatial = FALSE, fields = fields, priority_only = FALSE)
 
   # GAIN ECOREGION COLUMN
   # Join the records to the blocks data frame to gain the ecoregion column
@@ -975,7 +978,7 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
     # Get the blocks data frame
     fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
     blocks <- get_blocks(spatial = FALSE, fields = fields,
-                         crs = 4326)
+                         crs = 4326, priority_only = FALSE)
 
     # Join the records to the blocks data frame to gain the ecoregion column
     records2 <- left_join(ebird, blocks, by = c("ncba_block" = "ID_EBD_NAME")) %>%
@@ -1126,7 +1129,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
 
   if (database == "AtlasCache") {
     # Connect to the NCBA database
-    connection <- connect_ncba_db("ebd_mgmt", "ncba_functions_ebd_view")
+    connection <- connect_ncba_db("ncba_functions_ebd_view")
 
     # Define a query sequentially.  First, address project
     if (is.null(project) == TRUE) {
@@ -1249,7 +1252,7 @@ get_all_checklists <- function(drop_ncba_col=TRUE){
   library(tidyverse)
 
   # Connect to the NCBA database
-  connection <- connect_ncba_db("ebd_mgmt", "ebd")
+  connection <- connect_ncba_db("ebd")
 
   # Define a query
   query <- '{}'
@@ -1340,8 +1343,7 @@ get_observations <- function(database = "AtlasCache", species = NULL,
   # ATLAS CACHE ----------------------------------------------------------------
   if (database == "AtlasCache") {
     # Connect to the NCBA database
-    # connection <- connect_ncba_db("ebd_mgmt", "ebd")
-    connection <- connect_ncba_db("ebd_mgmt", "ncba_functions_ebd_view")
+    connection <- connect_ncba_db("ncba_functions_ebd_view")
 
     # ---------- QUERY DEFINITION ----------
     # Define a query sequentially.  First, address project
@@ -1565,7 +1567,7 @@ get_breeding_records <- function(behaviors = NULL,
     behaviors_mongolite <- paste0('["', paste(behaviors, collapse = '", "'), '"]')
 
     # Connect to the NCBA database
-    connection <- connect_ncba_db("ebd_mgmt", "ebd")
+    connection <- connect_ncba_db("ebd")
 
     # ---------- QUERY DEFINITION ----------
     # Define a query sequentially.  First, address project
@@ -1741,7 +1743,9 @@ observer_priority_by_breeding <- function(observer, data) {
 
   # Get a data frame of atlas blocks with the priority column
   blocks <- get_blocks(spatial = FALSE,
-                       fields = c("ID_BLOCK_CODE", "PRIORITY"))
+                       fields = c("ID_BLOCK_CODE", "PRIORITY"),
+                       priority_only = FALSE
+                       )
 
   # Get a data frame of the observer's observations, join get PRIORITY
   observations <- get_observations(observer = observer) %>%
@@ -1958,7 +1962,9 @@ observer_complete_by_priority <- function(observer, data) {
 
   # Get a data frame of atlas blocks with the priority column
   blocks <- get_blocks(spatial = FALSE,
-                       fields = c("ID_BLOCK_CODE", "PRIORITY"))
+                       fields = c("ID_BLOCK_CODE", "PRIORITY"),
+                       priority_only = FALSE
+                       )
 
   # Get a data frame of the observer's checklists, join get PRIORITY
   checklists <- get_checklists(observer = observer) %>%
@@ -2424,10 +2430,7 @@ block_predicted_spp <- function(block, source) {
   source <- source_lookup[[source]]
 
   # Connect to the blocks collection (table)
-  connection_blocks <- connect_ncba_db(
-    database = "ebd_mgmt",
-    collection = "blocks"
-  )
+  connection_blocks <- connect_ncba_db(collection = "blocks")
 
   # Define and execute a query (with fields) for blocks of predicted presence.
   fields <- str_interp('{"${source}": true}')
@@ -2488,8 +2491,7 @@ get_predicted_presence <- function(species, source, season) {
   source <- source_lookup[[source]]
 
   # Connect to the blocks collection (table)
-  connection_blocks <- connect_ncba_db(database = "ebd_mgmt",
-                                       collection = "blocks")
+  connection_blocks <- connect_ncba_db(collection = "blocks")
 
   # Define and execute a query (with fields) for blocks of predicted presence.
   fields <- '{"ID_BLOCK_CODE": true}'
@@ -2606,7 +2608,7 @@ blocks_needed <- function(species, source, season, database, project,
 
   # Get a blocks data frame with simple features
   fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME", "PRIORITY")
-  blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+  blocks_sf <- get_blocks(spatial = TRUE, fields = fields, priority_only = FALSE)
 
   # Get all the observations for the species
   if (is.null(observations) == TRUE) {
@@ -2753,7 +2755,7 @@ map_needed_highest <- function(species, source = "GAP", database = "AtlasCache",
   library(auk)
 
   # Get a blocks data frame with simple features
-  blocks <- get_blocks(spatial = TRUE, fields = c("ID_BLOCK_CODE", "PRIORITY"))
+  blocks <- get_blocks(spatial = TRUE, fields = c("ID_BLOCK_CODE", "PRIORITY"), priority_only = FALSE)
 
   # Get all the species observations
   obs <- get_observations(species = species) %>%
