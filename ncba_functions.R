@@ -33,12 +33,8 @@ if (!require(sf)) install.packages(
 
 # Load the config file
 source(here("ncba_config.r"))
+library(lubridate)
 
-# Set the working directory to the work_dir variable from the config file.
-#   This may not always work (rmarkdown).....
-# setwd(work_dir)
-
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 connect_ncba_db <- function(collection, database = "ebd_mgmt"){
   # Connect to the NCBA MongoDB database
