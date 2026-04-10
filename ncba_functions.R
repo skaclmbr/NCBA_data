@@ -181,6 +181,9 @@ get_records <- function(
   #'  @param atlas_only = TRUE or FALSE - indicates if only Atlas records returned
   
   # params <- formals()
+  # add variable to make sure at least some criteria passed
+  criteria_passed <- FALSE
+  
   # start output criteria string
   criteria <- paste0('[{"$match":{')
   
@@ -192,6 +195,7 @@ get_records <- function(
       criteria,
       '"OBSERVER_ID": {"$in":[', get_list_string(observer_id), ']}, '
     )
+    criteria_passed <- TRUE
   }
   
   # COMMON_NAME
@@ -202,6 +206,7 @@ get_records <- function(
       get_list_string(common_name),
       ']}, '
     )
+    criteria_passed <- TRUE
   }
   
   # ID_NCBA_BLOCK
@@ -212,7 +217,7 @@ get_records <- function(
       get_list_string(id_ncba_block),
       ']}, '
     )
-    
+    criteria_passed <- TRUE    
   }
   
   # SAMPLING_EVENT_IDENTIFIER
@@ -223,7 +228,7 @@ get_records <- function(
       get_list_string(sampling_event_identifier),
       ']}, '
     )
-    
+    criteria_passed <- TRUE
   }
   
   # BREEDING_CODE
@@ -234,7 +239,7 @@ get_records <- function(
       get_list_string(breeding_code),
       ']}, '
     )
-    # criteria['OBSERVATIONS.BREEDING_CODE'] <- get_list_string(breeding_code)
+    criteria_passed <- TRUE
   }
   
   # BREEDING_CATEGORY
@@ -245,15 +250,23 @@ get_records <- function(
       get_list_string(breeding_category),
       ']}, '
     )
+    criteria_passed <- TRUE
   }
   
   
   # Date Bounds
   ## make sure passed bounds not outside of Atlas dates
+  start_date_dt <- as.Date(start_end_date[1], format = dt_fmt)
+  end_date_dt <- as.Date(start_end_date[2], format = dt_fmt)
+  query_days <- difftime(end_date_dt, start_date_dt, units = "days")
   new_dates <- c(
-    max(c(as.Date(start_end_date[1], format = dt_fmt), as.Date(atlas_start, format = dt_fmt))),
-    min(c(as.Date(start_end_date[2], format = dt_fmt), as.Date(atlas_end, format = dt_fmt)))
+    max(c(start_date_dt, as.Date(atlas_start, format = dt_fmt))),
+    min(c(end_date_dt, as.Date(atlas_end, format = dt_fmt)))
   )
+
+  if (query_days < 366 && !criteria_passed) {
+    criteria_passed <- TRUE
+  }
   
   ## add date criteria
   criteria <- paste0(
@@ -273,11 +286,7 @@ get_records <- function(
   }
   criteria <- paste0(criteria, '}')
   
-  # # Done with initial match criteria
-  # ## remove trailing comma and space if present
-  # if (criteria[-2] == ', '){
-  #   criteria <- substr(criteria, 1, nchar(criteria) - 2)
-  # }
+  ## Done with initial match criteria
   
   # Checklists only
   ## if 
@@ -305,17 +314,20 @@ get_records <- function(
     # project fields to be remapped
     criteria <- paste0(
       criteria,
-      ', {"$replaceRoot":{ "newRoot": {"$mergeObjects":["$$ROOT","$OBSERVATIONS"]}}}'
+      ', {"$replaceRoot":{ "newRoot": {',
+      '"$mergeObjects":["$$ROOT","$OBSERVATIONS"]}}}'
     )
-    
   }
   
   # close criteria query
   criteria <- paste0(criteria, ']')
-  
-  # retrieve data from database
-  get_mongodb_data(criteria)
-  
+  if (criteria_passed){
+    # retrieve data from database
+    get_mongodb_data(criteria)
+  } else {
+    print(
+      paste0("get_records: Query returns too many records. ",
+      "Please request less than a year or add criteria.")
+    )
+  }
 }
-
-
