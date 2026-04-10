@@ -1,0 +1,194 @@
+
+dt_fmt <- "%Y-%m-%d"
+atlas_start <- "2021-01-01"
+atlas_end <- "2026-02-28"
+
+get_list_string <- function(item) {
+  # checks if passed item is a list,
+  # returns a string representation of a list
+  
+  if (!is.list(item) & !is.vector(item)) {
+    # not a list, only one item
+    paste0("'", item, "'")
+  } else if (is.character(item)) {
+    # list of characters, add quotes
+    paste("'", item, "'", collapse=", ", sep = "")
+    # toString(cat(dQuote(item, FALSE)))
+  } else {
+    # list of non-characters
+    toString(item)
+  }
+}
+
+get_records <- function(
+    observer_id = NULL,
+    id_ncba_block = NULL,
+    sampling_event_identifier = NULL,
+    common_name = NULL,
+    breeding_category = NULL,
+    breeding_code = NULL,
+    start_end_date = c("2021-01-01", "2026-02-28"),
+    checklists_only = FALSE,
+    all_observations = TRUE,
+    atlas_only = TRUE
+  ){
+  
+  # params <- formals()
+  # start output criteria string
+  criteria <- paste0("[{'$match':{")
+
+  # check for each input parameter, add to string if value passed
+  
+  # OBSERVER_ID
+  if (!is.null(observer_id)) {
+    criteria <- paste0(
+      criteria,
+      "'OBSERVER_ID': {'$in':[", get_list_string(observer_id), "]}, "
+    )
+  }
+  
+  # COMMON_NAME
+  if (!is.null(common_name)) {
+    criteria <- paste0(
+      criteria,
+      "'OBSERVATIONS.COMMON_NAME': {'$in':[",
+      get_list_string(common_name),
+      "]}, "
+    )
+  }
+  
+  # ID_NCBA_BLOCK
+  if (!is.null(id_ncba_block)) {
+    criteria <- paste0(
+      criteria,
+      "'ID_NCBA_BLOCK': {'$in':[",
+      get_list_string(id_ncba_block),
+      "]}, "
+    )
+
+  }
+
+  # SAMPLING_EVENT_IDENTIFIER
+  if (!is.null(sampling_event_identifier)) {
+    criteria <- paste0(
+      criteria,
+      "'SAMPLING_EVENT_IDENTIFIER': {'$in':[",
+      get_list_string(sampling_event_identifier),
+      "]}, "
+    )
+
+  }
+  
+  # BREEDING_CODE
+  if (!is.null(breeding_code)) {
+    criteria <- paste0(
+      criteria,
+      "'OBSERVATIONS.BREEDING_CODE': {'$in':[",
+      get_list_string(breeding_code),
+      "]}, "
+    )
+    # criteria["OBSERVATIONS.BREEDING_CODE"] <- get_list_string(breeding_code)
+  }
+  
+  # BREEDING_CATEGORY
+  if (!is.null(breeding_category)) {
+    criteria <- paste0(
+      criteria,
+      "'OBERSVATIONS.BREEDING_CATEGORY': {'$in':[",
+      get_list_string(breeding_category),
+      "]}, "
+    )
+  }
+    
+  
+  # Date Bounds
+  ## make sure passed bounds not outside of Atlas dates
+  new_dates <- c(
+    max(c(as.Date(start_end_date[1], format = dt_fmt), as.Date(atlas_start, format = dt_fmt))),
+    min(c(as.Date(start_end_date[2], format = dt_fmt), as.Date(atlas_end, format = dt_fmt)))
+  )
+  
+  ## add date criteria
+  criteria <- paste0(
+    criteria,
+    "'OBSERVATION_DATE' : {",
+    "'$gte' : '", new_dates[1], "',",
+    "'$lte' : '", new_dates[2], "'}"
+  )
+  
+  # Atlas Only
+  if (atlas_only){
+    criteria <- paste0(
+      criteria,
+      ", 'PROJECT_CODE' : 'EBIRD_ATL_NC'}"
+    )
+    
+  }
+  criteria <- paste0(criteria, "}")
+
+  # # Done with initial match criteria
+  # ## remove trailing comma and space if present
+  # if (criteria[-2] == ", "){
+  #   criteria <- substr(criteria, 1, nchar(criteria) - 2)
+  # }
+
+  # Checklists only
+  ## if 
+  if (checklists_only) {
+    criteria <- paste0(
+      criteria,
+      ", {'$project': {'OBSERVATIONS' : 0}}"
+    )
+  } else {
+    # All Observations
+    # if not all observations insert criteria after unwind
+    criteria <- paste0(
+      criteria,
+      ", {'$unwind': '$OBSERVATIONS'}"
+    )
+    if (!all_observations) {
+      criteria <- paste0(
+        criteria,
+        ", {'$match': {'OBSERVATIONS.COMMON_NAME': {'$in':[",
+        get_list_string(common_name),
+        "]}}}"
+      )
+    }
+    
+    # project fields to be remapped
+    criteria <- paste0(
+      criteria,
+      ", {'$replaceRoot':{ 'newRoot': {'$mergeObjects':['$$ROOT','$OBSERVATIONS']}}}"
+    )
+
+  }
+  
+  # close criteria query
+  criteria <- paste0(criteria, "]")
+}
+
+
+# testing function
+list_of_birds <- c("American Crow", "Eastern Bluebird")
+date_bounds <- c("2026-01-01", "2026-03-28")
+blocks <- c("SCOTTS_HILL-CW", "MEBANE-CW")
+sei <- c("S292461734", "S291706682", "S296754906", "S294554904", "S300550200")
+bc <- c("S", "S7")
+bcat <- c("C3", "C4")
+results <- get_records(
+  common_name = list_of_birds,
+  start_end_date = date_bounds,
+  id_ncba_block = blocks,
+  # sampling_event_identifier = sei,
+  atlas_only = TRUE,
+  all_observations = FALSE,
+  checklists_only = FALSE
+)
+results
+
+########TESTING
+# max(c(as.Date("2020-01-01", format = dt_fmt), as.Date("2021-01-01", format = dt_fmt)))
+    
+
+########END TESTING
+

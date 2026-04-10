@@ -1,0 +1,19 @@
+source("ncba_functions.R")
+
+# testing function
+list_of_birds <- c("American Crow", "Eastern Bluebird")
+date_bounds <- c("2026-01-01", "2026-03-28")
+blocks <- c("SCOTTS_HILL-CW", "MEBANE-CW")
+sei <- c("S292461734", "S291706682", "S296754906", "S294554904", "S300550200")
+bc <- c("S", "S7")
+bcat <- c("C3", "C4")
+results <- get_records(
+  common_name = list_of_birds,
+  start_end_date = date_bounds,
+  id_ncba_block = blocks,
+  # sampling_event_identifier = sei,
+  atlas_only = TRUE,
+  all_observations = FALSE,
+  checklists_only = FALSE
+)
+results
