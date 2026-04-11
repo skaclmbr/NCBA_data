@@ -314,7 +314,7 @@ get_records <- function(
     # project fields to be remapped
     criteria <- paste0(
       criteria,
-      ', {"$replaceRoot":{ "newRoot": {',
+      ', {"$replaceRoot":{ "newRoot": {', 
       '"$mergeObjects":["$$ROOT","$OBSERVATIONS"]}}}'
     )
   }
