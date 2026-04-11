@@ -9,6 +9,11 @@
 
 # this package loads the working directory from the R Studio Project
 # be sure to open in R Studio and create a project from the root
+
+################ TODO ##########################
+# update observation level criteria to include spp, bc, and bcat
+
+
 if (!require(here)) install.packages(
   "here", repos = "http://cran.us.r-project.org"
 )

@@ -7,7 +7,7 @@
 # For example, 'source("C:/Code/NCBA/ncba_functions.R").  The functions can
 
 from datetime import datetime, timedelta
-# from pymongo.mongo_client import MongoClient
+from pymongo.mongo_client import MongoClient
 from ncba_config import ncba_db_user, ncba_db_pass
 import certifi
 import json
@@ -17,15 +17,15 @@ atlas_start = datetime.strptime("2021-01-01", fmt_dt)
 atlas_end = datetime.strptime("2026-02-28", fmt_dt)
 max_timeout = 100000000
 
-# connString = f"mongodb+srv://{ncba_db_user}:{ncba_db_pass}@cluster0.rzpx8.mongodb.net/ebd_mgmt?retryWrites=true&w=majority"
+connString = f"mongodb+srv://{ncba_db_user}:{ncba_db_pass}@cluster0.rzpx8.mongodb.net/ebd_mgmt?retryWrites=true&w=majority"
 
-# client = MongoClient(
-#     connString, 
-#     connectTimeoutMS=max_timeout,
-#     socketTimeoutMS = max_timeout,
-#     serverSelectionTimeoutMS=max_timeout,
-#     tlsCAFile=certifi.where()
-#     )
+client = MongoClient(
+    connString, 
+    connectTimeoutMS=max_timeout,
+    socketTimeoutMS = max_timeout,
+    serverSelectionTimeoutMS=max_timeout,
+    tlsCAFile=certifi.where()
+    )
 
 def get_list_string(item):
     # test if item is string, convert to array
@@ -36,8 +36,6 @@ def get_list_string(item):
         results = [item]
 
     return results
-
-
 
 def get_records(
     observer_id = [],
@@ -53,16 +51,8 @@ def get_records(
 ):
     print("running")
     criteria_passed = False
-    criteria = []
-    criteria_match = {"$match": {}}
-    criteria_unwind = {"$unwind" : "$OBSERVATIONS"}
-    criteria_replaceroot = {
-        "$replaceRoot" : {
-            "newRoot" : {
-                "$mergeObjects" : ["$$ROOT", "$OBSERVATIONS"]
-            }
-        }
-    }
+    criteria = [{"$match": {}}]
+    criteria_obs = {}
 
     # OBSERVER_ID
     if observer_id: 
@@ -86,24 +76,24 @@ def get_records(
         criteria_passed = True
 
     # COMMON_NAME
-    if common_name: 
-        criteria[0]["$match"]["OBSERVATIONS.COMMON_NAME"] = {
-            "$in" : get_list_string(common_name)
-            }
+    if common_name:
+        criteria_temp = { "$in" : get_list_string(common_name) }
+        criteria[0]["$match"]["OBSERVATIONS.COMMON_NAME"] = criteria_temp
+        criteria_obs["OBSERVATIONS.COMMON_NAME"] = criteria_temp
         criteria_passed = True
 
     # BREEDING_CATEGORY
     if breeding_category: 
-        criteria[0]["$match"]["OBSERVATIONS.BREEDING_CATEGORY"] = {
-            "$in" : get_list_string(breeding_category)
-            }
+        criteria_temp = {"$in" : get_list_string(breeding_category)}
+        criteria[0]["$match"]["OBSERVATIONS.BREEDING_CATEGORY"] = criteria_temp
+        criteria_obs["OBSERVATIONS.BREEDING_CATEGORY"] = criteria_temp
         criteria_passed = True
 
     # BREEDING_CODE
     if breeding_code: 
-        criteria[0]["$match"]["OBSERVATIONS.BREEDING_CODE"] = {
-            "$in" : get_list_string(breeding_code)
-            }
+        criteria_temp = {"$in" : get_list_string(breeding_code)}
+        criteria[0]["$match"]["OBSERVATIONS.BREEDING_CODE"] = criteria_temp
+        criteria_obs["OBSERVATIONS.BREEDING_CODE"] = criteria_temp
         criteria_passed = True
 
     # OBSERVATION_DATE
@@ -136,12 +126,7 @@ def get_records(
         )
         if not all_observations:
             criteria.append(
-                {"$match" : {
-                    "OBSERVATIONS.COMMON_NAME" : {
-                        "$in": get_list_string(common_name)
-                    }
-                }
-                }
+                {"$match" : criteria_obs}
             )
         
         criteria.append(
@@ -153,16 +138,24 @@ def get_records(
                 }
             }
         )
+        # remove NCBA_BC_HISTORY from results
+        criteria.append(
+            {
+                "$project" : {"NCBA_BC_HISTORY" : 0} 
+            }
+        )
 
     # check if criteria passed, or query to return too many records
     if (query_days < 366 and not criteria_passed):
         criteria_passed = True
 
     if criteria_passed:
-        results = [
-            criteria_match
-        ]
+        results = criteria
+        db = client.ebd_mgmt
+        ebd = db.ebd
+        results = list(ebd.aggregate(criteria))
     else:
+        print(f"{query_days} days to be queried. Criteria passed: {criteria_passed}")
         results = False
         print(f"Query will result in too many records. Limit by date or other criteria.")
 
