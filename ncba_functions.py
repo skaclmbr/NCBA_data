@@ -49,11 +49,12 @@ def get_records(
     all_observations = True,
     atlas_only = True
 ):
-    print("running")
     criteria_passed = False
     criteria = [{"$match": {}}]
-    criteria_obs = {}
-
+    
+    # collects obs-level criteria for pre- and post- unwind match
+    criteria_obs = {} 
+    
     # OBSERVER_ID
     if observer_id: 
         criteria[0]["$match"]["OBSERVER_ID"] = {
@@ -104,7 +105,6 @@ def get_records(
         min(atlas_end, end_date_dt)
     ]
     query_days = (new_dates[1] - new_dates[0]).days
-    print(f"days to query:{query_days}") 
 
     criteria[0]["$match"]["OBSERVATION_DATE"] = {
         "$gte" : datetime.strftime(new_dates[0], fmt_dt),
@@ -141,7 +141,11 @@ def get_records(
         # remove NCBA_BC_HISTORY from results
         criteria.append(
             {
-                "$project" : {"NCBA_BC_HISTORY" : 0} 
+                "$project" : {
+                    "NCBA_BC_HISTORY" : 0,
+                    "OBSERVATIONS" : 0,
+                    "NCBA_OBSDT_UTC" : 0
+                    } 
             }
         )
 
@@ -154,6 +158,8 @@ def get_records(
         db = client.ebd_mgmt
         ebd = db.ebd
         results = list(ebd.aggregate(criteria))
+        # print(json.dumps(criteria, indent=2))
+        # results = True
     else:
         print(f"{query_days} days to be queried. Criteria passed: {criteria_passed}")
         results = False
