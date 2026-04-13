@@ -49,9 +49,50 @@ def get_records(
     all_observations = True,
     atlas_only = True
 ):
+    
+  #' get_records function
+  #' 
+  #' Retrieves records from the NC Bird Atlas Database
+  #' and returns them as a dataframe.
+  #' 
+  #' Inputs:
+  #'  @param observer_id = single value or list of observer ids
+  #'    (e.g., observer_id = c("obsr1234567", "obsr39485694"))
+  #'    
+  #'  @param id_ncba_block = single value or list of block ids
+  #'    (e.g., id_ncba_block = c("SCOTTS_HILL-CW", "WAKE_EAST-SE"))
+  #'    
+  #'  @param sampling_event_identifier = single value or list of checklist ids
+  #'    (e.g., sampling_event_identifier = c("S292131468", "S297472480"))
+  #'    
+  #'  @param common_name = single value or list of species common names
+  #'    (e.g., common_name = c("American Crow", "Eastern Bluebird"))
+  #'    
+  #'  @param breeding_category = single value or list of breeding categories
+  #'    (e.g., breeding_category = c("C3", "C4"))
+  #'    "" = Observed
+  #'    C1 = Flyover
+  #'    C2 = Possible
+  #'    C3 = Probable
+  #'    C4 = Confirmed
+  #'    
+  #'  @param breeding_code = single value or list of breeding codes
+  #'    (e.g., breeding_code = c("S", "S7"))
+  #'    
+  #'  @param start_end_date = vector of start and end dates
+  #'    (e.g., start_end_date = c("2026-01-01", "2026-02-28"))
+  #'    
+  #'  @param checklists_only = TRUE or FALSE - indicates if observation fields should
+  #'    be returned.
+  #'    (e.g., checklists_only = TRUE)
+  #'    
+  #'  @param all_observations = TRUE or FALSE - indicates if all observations from 
+  #'    checklist or only specified species (see common_name above) are
+  #'    returned.
+  #'    
     criteria_passed = False
     criteria = [{"$match": {}}]
-    
+
     # collects obs-level criteria for pre- and post- unwind match
     criteria_obs = {} 
     
