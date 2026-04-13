@@ -1,4 +1,4 @@
-/.Rproj.user 
+.Rproj.user/
 .RData
 .RDataTmp
 .RHistory
@@ -9,3 +9,4 @@ test2.r
 ncba_config.py
 test.py
 test.ipynb
+__pycache__/
