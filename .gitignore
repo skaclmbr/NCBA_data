@@ -4,9 +4,11 @@
 .RHistory
 ncba_functions.py
 ncba_config.r
+ncba_config.py
 test.r
 test2.r
 ncba_config.py
 test.py
 test.ipynb
 __pycache__/
+
