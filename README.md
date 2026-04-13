@@ -19,18 +19,24 @@ ncba_db_pass = "password"
 
 To enable the functions provide, place the following at the top of your r script:
 
-```{r}
+```r
 source("ncba_functions.R")
+```
+
+If using python, place the following at the top of your python script:
+
+```python
+from ncba_functions import get_records
 ```
 
 ## Usage
 
-The 'get_records' function allows retrieval of records from the NC Bird Atlas Database. You can query with the following options and parameters:
+The 'get_records' function allows retrieval of records from the NC Bird Atlas Database.
 
 ### get_records function
 
-Retrieves records from the NC Bird Atlas Database and returns them as a dataframe.
-   
+Retrieves records from the NC Bird Atlas Database and returns them as a dataframe (R) or JSON (python).
+
 #### Inputs:
 
 - observer_id = single value or list of observer ids (e.g., observer_id = c("obsr1234567", "obsr39485694"))
