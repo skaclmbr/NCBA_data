@@ -10,9 +10,6 @@
 # this package loads the working directory from the R Studio Project
 # be sure to open in R Studio and create a project from the root
 
-################ TODO ##########################
-# update observation level criteria to include spp, bc, and bcat
-
 
 if (!require(here)) install.packages(
   "here", repos = "http://cran.us.r-project.org"
@@ -185,31 +182,21 @@ get_records <- function(
   #'    
   #'  @param atlas_only = TRUE or FALSE - indicates if only Atlas records returned
   
-  # params <- formals()
   # add variable to make sure at least some criteria passed
   criteria_passed <- FALSE
   
   # start output criteria string
-  criteria <- paste0('[{"$match":{')
+  criteria <- paste0('{"$match":{')
+  criteria_obs <- paste0('{"$match":{')
   
   # check for each input parameter, add to string if value passed
   
+  ############ BEGIN INITIAL MATCH CRITERIA PIPELINE STAGE
   # OBSERVER_ID
   if (!is.null(observer_id)) {
     criteria <- paste0(
       criteria,
       '"OBSERVER_ID": {"$in":[', get_list_string(observer_id), ']}, '
-    )
-    criteria_passed <- TRUE
-  }
-  
-  # COMMON_NAME
-  if (!is.null(common_name)) {
-    criteria <- paste0(
-      criteria,
-      '"OBSERVATIONS.COMMON_NAME": {"$in":[',
-      get_list_string(common_name),
-      ']}, '
     )
     criteria_passed <- TRUE
   }
@@ -236,10 +223,34 @@ get_records <- function(
     criteria_passed <- TRUE
   }
   
+  # OBSERVATION LEVEL CRITERIA
+  # COMMON_NAME
+  if (!is.null(common_name)) {
+    criteria <- paste0(
+      criteria,
+      '"OBSERVATIONS.COMMON_NAME": {"$in":[',
+      get_list_string(common_name),
+      ']}, '
+    )
+    criteria_obs <- paste0(
+      criteria_obs,
+      '"OBSERVATIONS.COMMON_NAME": {"$in":[',
+      get_list_string(common_name),
+      ']}, '
+    )
+    criteria_passed <- TRUE
+  }
+  
   # BREEDING_CODE
   if (!is.null(breeding_code)) {
     criteria <- paste0(
       criteria,
+      '"OBSERVATIONS.BREEDING_CODE": {"$in":[',
+      get_list_string(breeding_code),
+      ']}, '
+    )
+    criteria_obs <- paste0(
+      criteria_obs,
       '"OBSERVATIONS.BREEDING_CODE": {"$in":[',
       get_list_string(breeding_code),
       ']}, '
@@ -251,7 +262,13 @@ get_records <- function(
   if (!is.null(breeding_category)) {
     criteria <- paste0(
       criteria,
-      '"OBERSVATIONS.BREEDING_CATEGORY": {"$in":[',
+      '"OBSERVATIONS.BREEDING_CATEGORY": {"$in":[',
+      get_list_string(breeding_category),
+      ']}, '
+    )
+    criteria_obs <- paste0(
+      criteria_obs,
+      '"OBSERVATIONS.BREEDING_CATEGORY": {"$in":[',
       get_list_string(breeding_category),
       ']}, '
     )
@@ -289,12 +306,14 @@ get_records <- function(
     )
     
   }
+  
   criteria <- paste0(criteria, '}')
+  criteria_obs <- paste0(clean_ending_comma(criteria_obs), '}')
+  ############ END INITIAL MATCH
   
-  ## Done with initial match criteria
   
+  ############ START PROJECT STAGE, and OBSERVATIONS CRITERIA
   # Checklists only
-  ## if 
   if (checklists_only) {
     criteria <- paste0(
       criteria,
@@ -310,13 +329,13 @@ get_records <- function(
     if (!all_observations) {
       criteria <- paste0(
         criteria,
-        ', {"$match": {"OBSERVATIONS.COMMON_NAME": {"$in":[',
-        get_list_string(common_name),
-        ']}}}'
+        ', ',
+        clean_ending_comma(criteria_obs),
+        '}'
       )
     }
     
-    # project fields to be remapped
+    # remove tiered JSON structure for OBSERVATIONS
     criteria <- paste0(
       criteria,
       ', {"$replaceRoot":{ "newRoot": {', 
@@ -324,8 +343,18 @@ get_records <- function(
     )
   }
   
+  # REMOVE UNNEEDED FIELDS
+  criteria <- paste0(
+    criteria,
+    ', {"$project":{',
+    '"OBSERVATIONS": 0,',
+    '"NCBA_BC_HISTORY": 0,',
+    '"NCBA_OBSDT_UTC": 0',
+    '}}'
+  )
+  
   # close criteria query
-  criteria <- paste0(criteria, ']')
+  criteria <- paste0('[', criteria, ']')
   if (criteria_passed){
     # retrieve data from database
     get_mongodb_data(criteria)
