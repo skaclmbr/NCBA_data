@@ -8,9 +8,9 @@ This repository contains functions to access the NC Bird Atlas dataset.
 
 Contact Scott K. Anderson ([skaclmbr](https://github.com/skaclmbr), [scott.anderson@ncwildlife.gov](mailto:scott.anderson@ncwildlife.org)) for username and password access to the database.
 
-Create a file in the default folder called "ncba_config.r", and include the following:
+Create a file in the default folder called "ncba_config.r" or "ncba_config.py", and include the following:
 
-```{r}
+```
 ncba_db_user = "username"
 ncba_db_pass = "password"
 ```
