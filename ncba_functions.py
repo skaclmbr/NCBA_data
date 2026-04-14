@@ -245,7 +245,6 @@ def get_records(
         ebd = db.ebd
         results = list(ebd.aggregate(criteria))
     else:
-        print(f"{query_days} days to be queried. Criteria passed: {criteria_passed}")
         results = False
         print(f"Query will result in too many records. Limit by date or other criteria.")
 
