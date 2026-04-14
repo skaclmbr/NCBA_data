@@ -11,9 +11,9 @@
 # be sure to open in R Studio and create a project from the root
 
 
-if (!require(here)) install.packages(
-  "here", repos = "http://cran.us.r-project.org"
-)
+# if (!require(here)) install.packages(
+#   "here", repos = "http://cran.us.r-project.org"
+# )
 # alternatively, you can set the working directory explicitly
 # setwd("C:/Users/skanderson/OneDrive - State of North Carolina/@@ncba/ncba/Code/NCBA/resources")
 
@@ -41,10 +41,10 @@ if (!require(mongolite)) install.packages(
 
 # Load the config file
 source(here("ncba_config.r"))
-library(lubridate)
+# library(lubridate)
 library(dplyr)
 library(mongolite)
-library(tmap)
+# library(tmap)
 library(tidyverse)
 library(jsonlite)
 
@@ -83,7 +83,7 @@ connect_ncba_db <- function(collection, database = "ebd_mgmt"){
   )
 
   # Connect to a specific collection (table)
-  m <- mongo(collection = collection, db = database, url = uri)
+  mongo(collection = collection, db = database, url = uri)
 }
 
 
@@ -355,6 +355,7 @@ get_records <- function(
   
   # close criteria query
   criteria <- paste0('[', criteria, ']')
+  
   if (criteria_passed){
     # retrieve data from database
     get_mongodb_data(criteria)
