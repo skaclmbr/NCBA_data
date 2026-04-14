@@ -40,7 +40,7 @@ if (!require(mongolite)) install.packages(
 # )
 
 # Load the config file
-source(here("ncba_config.r"))
+source("ncba_config.r")
 # library(lubridate)
 library(dplyr)
 library(mongolite)
@@ -51,7 +51,34 @@ library(jsonlite)
 dt_fmt <- "%Y-%m-%d"
 atlas_start <- "2021-01-01"
 atlas_end <- "2026-02-28"
-
+core_fields_project <- paste0(
+    ', {"$project": {',
+    '"SAMPLING_EVENT_IDENTIFIER" : 1,',
+    '"OBSERVATION_DATE" : 1,',
+    '"NCBA_WEEK" : 1,',
+    '"TIME_OBSERVATIONS_STARTED" : 1,',
+    '"OBSERVER_ID" : 1,',
+    '"ID_NCBA_BLOCK" : 1,',
+    '"PRIORITY_BLOCK" : 1,',
+    '"PROJECT_CODE" : 1,',
+    '"LOCALITY" : 1,',
+    '"LOCALITY_TYPE" : 1,',
+    '"COUNTY" : 1,',
+    '"LATITUDE" : 1,',
+    '"LONGITUDE" : 1,',
+    '"PROTOCOL_TYPE" : 1,',
+    '"EFFORT_DISTANCE_KM" : 1,',
+    '"DURATION_MINUTES" : 1,',
+    '"COMMON_NAME" : 1,',
+    '"BREEDING_CODE" : 1,',
+    '"BREEDING_CATEGORY" : 1,',
+    '"NUMBER_OBSERVERS" : 1,',
+    '"ALL_SPECIES_REPORTED" : 1,',
+    '"GROUP_IDENTIFIER" : 1,',
+    '"TRIP_COMMENTS" : 1,',
+    '"SPECIES_COMMENTS" : 1,',
+    '"NCBA_SEASON" : 1}}'
+)
 # -----------------------------------------------------------------------------
 connect_ncba_db <- function(collection, database = "ebd_mgmt"){
   # Connect to the NCBA MongoDB database
@@ -137,7 +164,8 @@ get_records <- function(
     start_end_date = c("2021-01-01", "2026-02-28"),
     checklists_only = FALSE,
     all_observations = TRUE,
-    atlas_only = TRUE
+    atlas_only = TRUE,
+    core_fields_only = TRUE
 ){
   
   #' get_records function
@@ -181,6 +209,9 @@ get_records <- function(
   #'    returned.
   #'    
   #'  @param atlas_only = TRUE or FALSE - indicates if only Atlas records returned
+  #' 
+  #' @param core_fields_only = TRUE or FALSE - indicates if fields returned
+  #'    should be restricted to core fields.
   
   # add variable to make sure at least some criteria passed
   criteria_passed <- FALSE
@@ -352,12 +383,21 @@ get_records <- function(
     '"NCBA_OBSDT_UTC": 0',
     '}}'
   )
+
+  # RESTRICT IF core_fields_only
+  if (core_fields_only) {
+    criteria <- paste0(
+      criteria,
+      core_fields_project
+    )
+  }
   
   # close criteria query
   criteria <- paste0('[', criteria, ']')
   
   if (criteria_passed){
     # retrieve data from database
+    print(criteria)
     get_mongodb_data(criteria)
   } else {
     print(
