@@ -1,6 +1,6 @@
 # NC Bird Atlas Data Access Tools
 
-This repository contains functions to access the NC Bird Atlas dataset.
+This repository contains functions to access the [NC Bird Atlas](https://ncbirdatlas.org) dataset.
 
 == STILL IN DEVELOPMENT ==
 
