@@ -17,6 +17,34 @@ atlas_start = datetime.strptime("2021-01-01", fmt_dt)
 atlas_end = datetime.strptime("2026-02-28", fmt_dt)
 max_timeout = 100000000
 
+core_fields = [
+    "SAMPLING_EVENT_IDENTIFIER",
+    "OBSERVATION_DATE",
+    "NCBA_WEEK",
+    "TIME_OBSERVATIONS_STARTED"
+    "OBSERVER_ID",
+    "ID_NCBA_BLOCK",
+    "PRIORITY_BLOCK",
+    "PROJECT_CODE",
+    "LOCALITY",
+    "LOCALITY_TYPE",
+    "COUNTY",
+    "LATITUDE",
+    "LONGITUDE",
+    "PROTOCOL_TYPE",
+    "EFFORT_DISTANCE_KM",
+    "DURATION_MINUTES",
+    "COMMON_NAME",
+    "BREEDING_CODE",
+    "BREEDING_CATEGORY",
+    "NUMBER_OBSERVERS",
+    "ALL_SPECIES_REPORTED",
+    "GROUP_IDENTIFIER",
+    "TRIP_COMMENTS",
+    "SPECIES_COMMENTS",
+    "NCBA_SEASON"
+]
+
 connString = f"mongodb+srv://{ncba_db_user}:{ncba_db_pass}@cluster0.rzpx8.mongodb.net/ebd_mgmt?retryWrites=true&w=majority"
 
 client = MongoClient(
@@ -47,7 +75,8 @@ def get_records(
     start_end_date = ["2021-01-01", "2026-02-28"],
     checklists_only = False,
     all_observations = True,
-    atlas_only = True
+    atlas_only = True,
+    core_fields_only = True
 ):
     
   #' get_records function
@@ -90,6 +119,10 @@ def get_records(
   #'    checklist or only specified species (see common_name above) are
   #'    returned.
   #'    
+  #'  @param core_fields_only = TRUE or FALSE - Determines if all fields or just
+  #'    a subset is returned.
+
+
     criteria_passed = False
     criteria = [{"$match": {}}]
 
@@ -190,6 +223,18 @@ def get_records(
             }
         )
 
+    if core_fields_only:
+        # restrict fields to the core fields
+        #create project dict
+        project_code = {}
+        for f in core_fields: project_code[f] = 1
+
+        criteria.append(
+            {
+                "$project": project_code
+            }
+        )
+
     # check if criteria passed, or query to return too many records
     if (query_days < 366 and not criteria_passed):
         criteria_passed = True
@@ -199,8 +244,6 @@ def get_records(
         db = client.ebd_mgmt
         ebd = db.ebd
         results = list(ebd.aggregate(criteria))
-        # print(json.dumps(criteria, indent=2))
-        # results = True
     else:
         print(f"{query_days} days to be queried. Criteria passed: {criteria_passed}")
         results = False
